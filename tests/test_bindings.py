@@ -107,6 +107,16 @@ def test_box():
         c.crypto_box_open(
             message + b"!", nonce, A_pubkey, A_secretkey)
 
+    s1 = c.crypto_box_seal(message, A_pubkey)
+    assert len(s1) == len(message) + c.crypto_box_SEALBYTES
+    m1 = c.crypto_box_seal_open(s1, A_pubkey, A_secretkey)
+    assert m1 == message
+
+    with pytest.raises(ValueError):
+        c.crypto_box_seal_open(b"!", A_pubkey, A_secretkey)
+    with pytest.raises(CryptoError):
+        c.crypto_box_seal_open(b"!" + s1, A_pubkey, A_secretkey)
+
 
 def test_box_wrong_lengths():
     A_pubkey, A_secretkey = c.crypto_box_keypair()

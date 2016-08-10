@@ -44,6 +44,13 @@ class PublicKey(encoding.Encodable, StringFixer, object):
     def __bytes__(self):
         return self._public_key
 
+    def seal(self, message, encoder=encoding.RawEncoder):
+        ciphertext = nacl.bindings.crypto_box_seal(
+            message,
+            self._public_key,
+        )
+        encoded_ciphertext = encoder.encode(ciphertext)
+        return encoded_ciphertext
 
 class PrivateKey(encoding.Encodable, StringFixer, object):
     """
@@ -90,6 +97,17 @@ class PrivateKey(encoding.Encodable, StringFixer, object):
         """
         return cls(random(PrivateKey.SIZE), encoder=encoding.RawEncoder)
 
+    def seal(self, *args, **kwargs):
+        return self.public_key.seal(*args, **kwargs)
+
+    def seal_open(self, ciphertext, encoder=encoding.RawEncoder):
+        decoded_ciphertext = encoder.decode(ciphertext)
+        plaintext = nacl.bindings.crypto_box_seal_open(
+            decoded_ciphertext,
+            self.public_key._public_key,
+            self._private_key,
+        )
+        return plaintext
 
 class Box(encoding.Encodable, StringFixer, object):
     """

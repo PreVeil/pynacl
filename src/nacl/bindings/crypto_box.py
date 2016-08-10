@@ -27,6 +27,7 @@ crypto_box_NONCEBYTES = lib.crypto_box_noncebytes()
 crypto_box_ZEROBYTES = lib.crypto_box_zerobytes()
 crypto_box_BOXZEROBYTES = lib.crypto_box_boxzerobytes()
 crypto_box_BEFORENMBYTES = lib.crypto_box_beforenmbytes()
+crypto_box_SEALBYTES = lib.crypto_box_sealbytes()
 
 
 def crypto_box_keypair():
@@ -178,3 +179,48 @@ def crypto_box_open_afternm(ciphertext, nonce, k):
         raise CryptoError("An error occurred trying to decrypt the message")
 
     return ffi.buffer(plaintext, len(padded))[crypto_box_ZEROBYTES:]
+
+def crypto_box_seal(message, recipient_pk):
+    """
+    The C crypto_box_seal() function encrypts a message m of length mlen
+    for a recipient whose public key is pk. It puts the ciphertext whose
+    length is crypto_box_SEALBYTES + mlen into c.  The function creates
+    a new key pair for each message, and attaches the public key to the
+    ciphertext. The secret key is overwritten and is not accessible after
+    this function returns.
+    """
+
+    if len(recipient_pk) != crypto_box_PUBLICKEYBYTES:
+        raise ValueError("Invalid public key")
+
+    clen = crypto_box_SEALBYTES + len(message)
+    ciphertext = ffi.new("unsigned char[]", clen)
+
+    rc = lib.crypto_box_seal(ciphertext, message, len(message), recipient_pk)
+    assert rc == 0
+
+    return ffi.buffer(ciphertext, clen)[:]
+
+def crypto_box_seal_open(ciphertext, recipient_pk, recipient_sk):
+    """
+    The C crypto_box_seal_open() function decrypts the ciphertext c whose
+    length is clen, using the key pair (pk, sk), and puts the decrypted
+    message into m (clen - crypto_box_SEALBYTES bytes).
+    """
+
+    if len(recipient_pk) != crypto_box_PUBLICKEYBYTES:
+        raise ValueError("Invalid public key")
+    if len(recipient_sk) != crypto_box_SECRETKEYBYTES:
+        raise ValueError("Invalid secret key")
+    if len(ciphertext) < crypto_box_SEALBYTES:
+        raise ValueError("Invalid ciphertext: too short")
+
+    mlen = len(ciphertext) - crypto_box_SEALBYTES
+    plaintext = ffi.new("unsigned char[]", mlen)
+
+    rc = lib.crypto_box_seal_open(plaintext, ciphertext, len(ciphertext),
+                                  recipient_pk, recipient_sk)
+    if rc != 0:
+        raise CryptoError("An error occurred while trying to unseal")
+
+    return ffi.buffer(plaintext, mlen)[:]

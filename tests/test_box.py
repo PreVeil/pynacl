@@ -144,6 +144,28 @@ def test_box_decryption(
     ),
     VECTORS,
 )
+def test_box_seal(
+        privalice, pubalice, privbob, pubbob, nonce, plaintext, ciphertext):
+    pubalice = PublicKey(pubalice, encoder=HexEncoder)
+    privalice = PrivateKey(privalice, encoder=HexEncoder)
+    plaintext = binascii.unhexlify(plaintext)
+
+    sealed = pubalice.seal(plaintext)
+    unsealed = privalice.seal_open(sealed)
+    assert plaintext == unsealed
+
+    sealed2 = privalice.seal(plaintext)
+    unsealed2 = privalice.seal_open(sealed2)
+    assert plaintext == unsealed2
+
+
+@pytest.mark.parametrize(
+    (
+        "privalice", "pubalice", "privbob", "pubbob", "nonce", "plaintext",
+        "ciphertext",
+    ),
+    VECTORS,
+)
 def test_box_decryption_combined(
         privalice, pubalice, privbob, pubbob, nonce, plaintext, ciphertext):
     pubbob = PublicKey(pubbob, encoder=HexEncoder)
